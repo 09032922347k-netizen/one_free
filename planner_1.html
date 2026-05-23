@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Планер</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #F4EFE6;
+  --surface: #EDE6D8;
+  --card:    #E8E0CF;
+  --border:  #D4C9B4;
+  --text:    #2E2A25;
+  --muted:   #9A8F7E;
+  --accent:  #7A6248;
+  --done:    #A89880;
+  --today:   #C4A882;
+  --circ:    364.4;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: 'Jost', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 300;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2rem 2.5rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.month-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: 0.08em;
+  min-width: 160px;
+  text-align: center;
+}
+.nav-arrow {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 30px; height: 30px;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.nav-arrow:hover { background: var(--card); }
+
+/* ── DIAGRAMS ── */
+.diagrams {
+  display: flex;
+  gap: 2rem;
+  padding: 1.4rem 2.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  align-items: center;
+}
+.diag-block {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.diag-ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+.diag-ring svg { transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--border); stroke-width: 6; }
+.ring-fill  { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
+.diag-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.diag-pct {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem;
+  font-weight: 300;
+  color: var(--accent);
+  line-height: 1;
+}
+.diag-info { }
+.diag-title {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+.diag-sub {
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.diag-sep {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+  margin: 0 0.5rem;
+}
+
+/* ── TABLE WRAPPER ── */
+.table-wrap {
+  overflow-x: auto;
+  padding: 1.5rem 2.5rem 2rem;
+}
+
+/* ── TABLE ── */
+table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+}
+
+/* column widths */
+.col-task { min-width: 220px; width: 220px; }
+.col-day  { width: 34px; min-width: 34px; }
+
+/* header row */
+thead th {
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 400;
+  padding-bottom: 0.6rem;
+  text-align: center;
+}
+thead th.col-task { text-align: left; padding-left: 0; padding-right: 1rem; }
+
+/* day number header */
+.day-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--text);
+  line-height: 1.2;
+}
+.day-dow {
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+th.today-col .day-num { color: var(--accent); font-weight: 400; }
+
+/* task rows */
+tbody tr {
+  border-top: 1px solid var(--border);
+}
+tbody tr:last-child { border-bottom: 1px solid var(--border); }
+
+td {
+  padding: 0.45rem 0;
+  vertical-align: middle;
+}
+td.col-task {
+  padding-right: 1.2rem;
+}
+
+/* task cell */
+.task-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.task-name {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+.task-del {
+  background: none;
+  border: none;
+  color: var(--border);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+  opacity: 0;
+}
+tbody tr:hover .task-del { opacity: 1; }
+.task-del:hover { color: var(--accent); }
+
+/* check dot */
+.check-cell {
+  text-align: center;
+}
+.check-dot {
+  width: 20px; height: 20px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  margin: 0 auto;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.check-dot.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check-dot.on::after {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--bg);
+  border-radius: 50%;
+}
+td.today-col .check-dot {
+  border-color: var(--today);
+}
+td.today-col .check-dot.on {
+  background: var(--today);
+  border-color: var(--today);
+}
+
+/* add-task row */
+.add-row td {
+  padding-top: 0.8rem;
+  border-top: none;
+}
+.add-row { border-top: none !important; }
+.add-form {
+  display: flex;
+  gap: 0.4rem;
+}
+.add-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.add-input::placeholder { color: var(--muted); }
+.add-input:focus { border-color: var(--accent); }
+.add-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: var(--bg);
+  font-size: 1.1rem;
+  width: 30px; height: 30px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.add-btn:hover { opacity: 0.85; }
+
+/* today column highlight */
+th.today-col, td.today-col {
+  background: rgba(196,168,130,0.1);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Планер</div>
+  <div class="month-nav">
+    <button class="nav-arrow" onclick="changeMonth(-1)">‹</button>
+    <div class="month-label" id="month-label"></div>
+    <button class="nav-arrow" onclick="changeMonth(1)">›</button>
+  </div>
+</header>
+
+<div class="diagrams">
+  <div class="diag-block">
+    <div class="diag-ring">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle class="ring-track" cx="32" cy="32" r="26"/>
+        <circle class="ring-fill" id="d-day" cx="32" cy="32" r="26"
+          stroke-dasharray="163.4" stroke-dashoffset="163.4"/>
+      </svg>
+      <div class="diag-inner"><span class="diag-pct" id="pct-day">0%</span></div>
+    </div>
+    <div class="diag-info">
+      <div class="diag-title">Сегодня</div>
+      <div class="diag-sub" id="sub-day">0 из 0 задач</div>
+    </div>
+  </div>
+  <div class="diag-sep"></div>
+  <div class="diag-block">
+    <div class="diag-ring">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle class="ring-track" cx="32" cy="32" r="26"/>
+        <circle class="ring-fill" id="d-week" cx="32" cy="32" r="26"
+          stroke-dasharray="163.4" stroke-dashoffset="163.4"/>
+      </svg>
+      <div class="diag-inner"><span class="diag-pct" id="pct-week">0%</span></div>
+    </div>
+    <div class="diag-info">
+      <div class="diag-title">Неделя</div>
+      <div class="diag-sub" id="sub-week">0 из 0</div>
+    </div>
+  </div>
+  <div class="diag-sep"></div>
+  <div class="diag-block">
+    <div class="diag-ring">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle class="ring-track" cx="32" cy="32" r="26"/>
+        <circle class="ring-fill" id="d-month" cx="32" cy="32" r="26"
+          stroke-dasharray="163.4" stroke-dashoffset="163.4"/>
+      </svg>
+      <div class="diag-inner"><span class="diag-pct" id="pct-month">0%</span></div>
+    </div>
+    <div class="diag-info">
+      <div class="diag-title">Месяц</div>
+      <div class="diag-sub" id="sub-month">0 из 0</div>
+    </div>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table id="main-table">
+    <thead id="thead"></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+const CIRC = 163.4;
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const DOWS = ['вс','пн','вт','ср','чт','пт','сб'];
+const DOWS_LONG = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+const now = new Date();
+let curYear = now.getFullYear();
+let curMonth = now.getMonth();
+
+// tasks: [{id, name}]
+// checks: { 'taskId_day': true/false }
+let tasks = [];
+let checks = {};
+let nextId = 1;
+
+function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+
+function changeMonth(d) {
+  curMonth += d;
+  if (curMonth > 11) { curMonth = 0; curYear++; }
+  if (curMonth < 0)  { curMonth = 11; curYear--; }
+  render();
+}
+
+function addTask() {
+  const inp = document.getElementById('add-input');
+  const name = inp.value.trim();
+  if (!name) return;
+  tasks.push({ id: nextId++, name });
+  inp.value = '';
+  render();
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  // clean up checks
+  Object.keys(checks).forEach(k => { if (k.startsWith(id + '_')) delete checks[k]; });
+  render();
+}
+
+function toggle(taskId, day) {
+  const key = taskId + '_' + day;
+  checks[key] = !checks[key];
+  render();
+}
+
+function isChecked(taskId, day) {
+  return !!checks[taskId + '_' + day];
+}
+
+function render() {
+  const days = daysInMonth(curYear, curMonth);
+  const todayD = (now.getFullYear() === curYear && now.getMonth() === curMonth) ? now.getDate() : -1;
+
+  // month label
+  document.getElementById('month-label').textContent = MONTHS[curMonth] + ' ' + curYear;
+
+  // THEAD
+  const thead = document.getElementById('thead');
+  let hRow1 = '<tr><th class="col-task"></th>';
+  for (let d = 1; d <= days; d++) {
+    const dow = new Date(curYear, curMonth, d).getDay();
+    const isTod = d === todayD;
+    hRow1 += `<th class="col-day${isTod ? ' today-col' : ''}">
+      <div class="day-num">${d}</div>
+      <div class="day-dow">${DOWS[dow]}</div>
+    </th>`;
+  }
+  hRow1 += '</tr>';
+  thead.innerHTML = hRow1;
+
+  // TBODY
+  const tbody = document.getElementById('tbody');
+  let rows = '';
+
+  tasks.forEach(task => {
+    rows += `<tr>
+      <td class="col-task">
+        <div class="task-cell">
+          <span class="task-name" title="${task.name}">${task.name}</span>
+          <button class="task-del" onclick="deleteTask(${task.id})">×</button>
+        </div>
+      </td>`;
+    for (let d = 1; d <= days; d++) {
+      const on = isChecked(task.id, d);
+      const isTod = d === todayD;
+      rows += `<td class="check-cell col-day${isTod ? ' today-col' : ''}">
+        <div class="check-dot${on ? ' on' : ''}" onclick="toggle(${task.id}, ${d})"></div>
+      </td>`;
+    }
+    rows += '</tr>';
+  });
+
+  // add row
+  rows += `<tr class="add-row">
+    <td class="col-task" colspan="1">
+      <div class="add-form">
+        <input class="add-input" id="add-input" placeholder="Добавить задачу..."
+          onkeydown="if(event.key==='Enter')addTask()">
+        <button class="add-btn" onclick="addTask()">+</button>
+      </div>
+    </td>
+    <td colspan="${days}"></td>
+  </tr>`;
+
+  tbody.innerHTML = rows;
+
+  updateDiagrams(days, todayD);
+}
+
+function updateDiagrams(days, todayD) {
+  const total = tasks.length;
+
+  // today
+  const todayDone = todayD > 0 ? tasks.filter(t => isChecked(t.id, todayD)).length : 0;
+  setDiag('day', todayDone, total, `${todayDone} из ${total} задач`);
+
+  // current week (Mon-Sun containing today)
+  let weekDone = 0, weekTotal = 0;
+  if (todayD > 0) {
+    const dow = new Date(curYear, curMonth, todayD).getDay();
+    const mondayOffset = (dow === 0 ? 6 : dow - 1);
+    const weekStart = todayD - mondayOffset;
+    const weekEnd = weekStart + 6;
+    for (let d = Math.max(1, weekStart); d <= Math.min(days, weekEnd); d++) {
+      tasks.forEach(t => {
+        weekTotal++;
+        if (isChecked(t.id, d)) weekDone++;
+      });
+    }
+  }
+  setDiag('week', weekDone, weekTotal, `${weekDone} из ${weekTotal}`);
+
+  // month
+  let monthDone = 0, monthTotal = 0;
+  for (let d = 1; d <= days; d++) {
+    tasks.forEach(t => {
+      monthTotal++;
+      if (isChecked(t.id, d)) monthDone++;
+    });
+  }
+  setDiag('month', monthDone, monthTotal, `${monthDone} из ${monthTotal}`);
+}
+
+function setDiag(id, done, total, sub) {
+  const pct = total === 0 ? 0 : Math.round(done / total * 100);
+  const offset = CIRC - (CIRC * pct / 100);
+  document.getElementById('d-' + id).style.strokeDashoffset = offset;
+  document.getElementById('pct-' + id).textContent = pct + '%';
+  document.getElementById('sub-' + id).textContent = sub;
+}
+
+render();
+</script>
+</body>
+</html>

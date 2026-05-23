@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Планер</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=Jost:wght@300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #FFFFFF;
+      --bg-gray:  #F5F5F5;
+      --bg-hover: #EFEFEF;
+      --bg-today: #E8F0FF;
+      --accent:   #2563EB;
+      --text:     #333333;
+      --dim:      #888888;
+      --border:   #E0E0E0;
+      --ring-bg:  #FFFFFF;
+      --tcol:     220px;
+      --dcol:     44px;
+      --rh:       44px;
+    }
+
+    html, body {
+      height: 100%; overflow: hidden;
+      background: var(--bg); color: var(--text);
+      font-family: 'Jost', sans-serif; font-weight: 300;
+    }
+    html::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      z-index: 10;
+    }
+    button { cursor: pointer; font-family: inherit; font-weight: 300; }
+
+    .app { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── HEADER ─────────────────────────────────────── */
+
+    header {
+      flex-shrink: 0; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: 'Cormorant Garamond', serif; font-weight: 700;
+      font-size: 24px; letter-spacing: 0.08em; color: var(--accent);
+    }
+    .mnav { display: flex; align-items: center; gap: 20px; }
+    .mnav-btn {
+      background: none; border: none; color: var(--dim);
+      font-size: 22px; line-height: 1; padding: 2px 8px;
+      transition: color .15s, transform .15s;
+      cursor: pointer;
+    }
+    .mnav-btn:hover { color: var(--accent); transform: scale(1.2); }
+    #monthLabel {
+      font-family: 'Cormorant Garamond', serif; font-weight: 300;
+      font-size: 17px; letter-spacing: 0.1em;
+      min-width: 168px; text-align: center;
+    }
+
+    /* ── QUOTE ──────────────────────────────────────── */
+
+    .quote-section {
+      flex-shrink: 0;
+      display: flex; justify-content: center; align-items: center;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .quote {
+      font-size: 14px;
+      font-weight: 600;
+      font-style: italic;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+      line-height: 1.5;
+      max-width: 420px;
+      text-align: center;
+    }
+
+    /* ── CHARTS ─────────────────────────────────────── */
+
+    .charts {
+      flex-shrink: 0; height: 160px;
+      display: flex; justify-content: space-around; align-items: center;
+      padding: 0 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .chart-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .chart-item[hidden] { display: none; }
+    .chart-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ── TABLE SECTION ──────────────────────────────── */
+
+    .table-section {
+      flex: 1 1 0; min-height: 0;
+      display: flex; flex-direction: column;
+    }
+    .table-scroll {
+      flex: 1 1 0; min-height: 0; overflow: auto;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .table-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+    .table-scroll::-webkit-scrollbar-track { background: transparent; }
+    .table-scroll::-webkit-scrollbar-thumb { background: #D0D0D0; border-radius: 2px; }
+
+    table { border-collapse: collapse; width: max-content; }
+
+    /* Sticky thead */
+    thead th {
+      position: sticky; top: 0;
+      background: var(--bg-gray); z-index: 2;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Task column — sticky left */
+    .col-t {
+      position: sticky; left: 0;
+      width: var(--tcol); min-width: var(--tcol);
+      background: var(--bg-gray);
+      border-right: 1px solid var(--border);
+    }
+    thead .col-t { z-index: 4; }
+    tbody .col-t { z-index: 1; }
+
+    th.col-t {
+      font-size: 11px; font-weight: 300;
+      letter-spacing: 0.13em; text-transform: uppercase;
+      color: var(--dim); text-align: left;
+      padding: 0 16px; height: 48px;
+    }
+
+    /* Day columns */
+    th.col-d, td.col-d {
+      width: var(--dcol); min-width: var(--dcol);
+      border-right: 1px solid var(--border);
+      text-align: center;
+    }
+    th.col-d {
+      font-size: 10px; font-weight: 300;
+      color: var(--dim); padding: 7px 0 9px;
+    }
+    th.col-d .dn { display: block; font-size: 13px; color: var(--text); margin-bottom: 2px; }
+    th.col-d .dw { display: block; font-size: 9px; letter-spacing: 0.04em; }
+
+    /* Today column */
+    .is-today {
+      background: linear-gradient(180deg, rgba(232, 240, 255, 0.8), rgba(226, 232, 255, 0.5));
+      position: relative;
+    }
+    thead th.is-today .dn {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    thead th.is-today::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    /* Body rows */
+    tbody tr {
+      height: var(--rh);
+      transition: background-color .12s;
+    }
+    tbody td {
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      background: var(--bg-gray);
+    }
+    tbody td.col-t { background: var(--bg-gray); }
+    tbody tr:hover {
+      background-color: #F9F9F9;
+    }
+    tbody tr:hover td { background: #F9F9F9; }
+    tbody tr:hover td.col-t { background: var(--bg-hover); }
+    tbody tr:hover .del-btn { opacity: 1; }
+
+    .task-cell {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 10px 0 16px; height: var(--rh);
+    }
+    .task-name {
+      font-size: 13px; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .del-btn {
+      opacity: 0; background: none; border: none;
+      color: var(--dim); font-size: 18px; line-height: 1;
+      padding: 0 0 0 8px; flex-shrink: 0;
+      transition: opacity .15s, color .15s;
+    }
+    .del-btn:hover { color: #DC2626; }
+
+    /* Check cells */
+    td.col-d { vertical-align: middle; padding: 0; }
+    .chk-btn {
+      background: none; border: none;
+      width: 100%; height: var(--rh);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ring {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 1.5px solid #CCCCCC;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color .15s, background-color .15s, transform .15s;
+      background: transparent;
+    }
+    .ring.done {
+      border-color: var(--accent);
+      background: rgba(37, 99, 235, 0.1);
+    }
+    .chk-btn:hover .ring:not(.done) { border-color: #999999; }
+    .chk-btn:active .ring { transform: scale(0.92); }
+    @keyframes checkmark-pop {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .ring.done svg { animation: checkmark-pop .25s ease-out; }
+
+    /* Empty hint */
+    .empty-hint {
+      display: flex; align-items: center;
+      height: var(--rh); padding: 0 16px;
+      font-size: 12px; color: var(--dim); letter-spacing: 0.07em;
+    }
+
+    /* ── ADD TASK ────────────────────────────────────── */
+
+    .add-area {
+      flex-shrink: 0;
+      width: var(--tcol);
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 10px 10px 16px;
+      border-top: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      background: var(--bg-gray);
+    }
+    .add-input {
+      flex: 1; background: none; border: none;
+      border-bottom: 2px solid var(--border);
+      color: var(--text); font-family: 'Jost', sans-serif;
+      font-weight: 300; font-size: 13px;
+      padding: 3px 0; outline: none;
+      transition: border-color .15s;
+      border-radius: 2px 2px 0 0;
+    }
+    .add-input::placeholder { color: var(--dim); }
+    .add-input:focus { border-bottom-color: var(--accent); }
+    .add-btn {
+      background: none; border: none; color: var(--accent);
+      font-size: 22px; line-height: 1; padding: 0;
+      transition: opacity .15s, transform .15s;
+      cursor: pointer;
+    }
+    .add-btn:hover { opacity: 0.75; transform: scale(1.15); }
+    .add-btn:active { transform: scale(0.95); }
+
+    /* ── FOOTER ─────────────────────────────────────── */
+
+    footer {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 32px;
+      border-top: 1px solid var(--border);
+    }
+    .thoughts-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 32px;
+      border: 1.5px solid var(--accent);
+      border-radius: 8px;
+      transition: all .2s;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+    }
+    .thoughts-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-family: 'Jost', sans-serif;
+      font-weight: 300;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      cursor: pointer;
+      padding: 0;
+      transition: all .15s;
+      text-transform: lowercase;
+    }
+    .thoughts-card:hover {
+      background: rgba(37, 99, 235, 0.08);
+      border-color: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+    }
+    .thoughts-btn:hover { color: #1d4ed8; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">Планер</div>
+    <div class="mnav">
+      <button class="mnav-btn" id="prevBtn">‹</button>
+      <div id="monthLabel"></div>
+      <button class="mnav-btn" id="nextBtn">›</button>
+    </div>
+  </header>
+
+  <div class="quote-section">
+    <div class="quote">Счастье — это вопрос порядка и дисциплины.</div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-item" id="cToday"></div>
+    <div class="chart-item" id="cWeek"></div>
+    <div class="chart-item" id="cMonth"></div>
+  </div>
+
+  <div class="table-section">
+    <div class="table-scroll">
+      <table>
+        <thead id="tHead"></thead>
+        <tbody id="tBody"></tbody>
+      </table>
+    </div>
+    <div class="add-area">
+      <input class="add-input" id="taskInput" type="text"
+             placeholder="Новая задача" maxlength="60" autocomplete="off">
+      <button class="add-btn" id="addBtn">+</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="thoughts-card">
+      <a href="https://t.me/a_brodin" target="_blank" class="thoughts-btn">опиши свои мысли</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+const MN = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+            'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const WD = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+const NOW = new Date(); NOW.setHours(0,0,0,0);
+let vY = NOW.getFullYear(), vM = NOW.getMonth();
+
+// ── Storage ───────────────────────────────────────────────────────────────────
+
+function sk(y, m) { return `planner_${y}_${String(m+1).padStart(2,'0')}`; }
+
+function load(y, m) {
+  try {
+    const s = localStorage.getItem(sk(y, m));
+    return s ? JSON.parse(s) : { tasks: [], completions: {} };
+  } catch { return { tasks: [], completions: {} }; }
+}
+
+function save(y, m, data) { localStorage.setItem(sk(y, m), JSON.stringify(data)); }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function dim(y, m) { return new Date(y, m+1, 0).getDate(); }
+function isCur() { return vY === NOW.getFullYear() && vM === NOW.getMonth(); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Colour & Donut ────────────────────────────────────────────────────────────
+
+function pctCol(p) { return `hsl(${(p * 1.2).toFixed(1)},62%,56%)`; }
+
+function donut(pct) {
+  const r = 37, cx = 50, cy = 50;
+  const C = 2 * Math.PI * r;
+  const fill = (pct / 100) * C;
+  const c = pctCol(pct);
+  const arc = pct > 0
+    ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}"
+         stroke-width="8" stroke-linecap="round"
+         stroke-dasharray="${fill.toFixed(2)} ${C.toFixed(2)}"
+         transform="rotate(-90 ${cx} ${cy})"/>`
+    : '';
+  return `<svg width="112" height="112" viewBox="0 0 100 100">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#E8E8E8" stroke-width="8"/>
+    ${arc}
+    <text x="${cx}" y="${cy+1}" dominant-baseline="middle" text-anchor="middle"
+      fill="${c}" font-size="18" font-family="Jost,sans-serif">${Math.round(pct)}%</text>
+  </svg>`;
+}
+
+// ── Progress ──────────────────────────────────────────────────────────────────
+
+function calcProgress(y, m) {
+  const { tasks: T, completions: C } = load(y, m);
+  const days = dim(y, m);
+  if (!T.length) return { today: 0, week: 0, month: 0 };
+
+  // month
+  let mD = 0;
+  T.forEach(t => { for (let d = 1; d <= days; d++) if (C[`${t.id}_${d}`]) mD++; });
+  const month = mD / (T.length * days) * 100;
+
+  if (!isCur()) return { today: 0, week: 0, month };
+
+  // today
+  const td = NOW.getDate();
+  const tD = T.filter(t => C[`${t.id}_${td}`]).length;
+  const today = tD / T.length * 100;
+
+  // week Mon–Sun
+  const dw = NOW.getDay();
+  const mo = dw === 0 ? -6 : 1 - dw;
+  const ws = new Date(NOW); ws.setDate(NOW.getDate() + mo);
+  const we = new Date(ws); we.setDate(ws.getDate() + 6);
+  let wP = 0, wD = 0;
+  for (let d = 1; d <= days; d++) {
+    const dt = new Date(y, m, d);
+    if (dt >= ws && dt <= we) {
+      wP += T.length;
+      T.forEach(t => { if (C[`${t.id}_${d}`]) wD++; });
+    }
+  }
+  const week = wP ? wD / wP * 100 : 0;
+
+  return { today, week, month };
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function renderAll() {
+  const cur = isCur();
+  const p = calcProgress(vY, vM);
+
+  // Header label
+  document.getElementById('monthLabel').textContent = `${MN[vM]} ${vY}`;
+
+  // Charts
+  const cT = document.getElementById('cToday');
+  const cW = document.getElementById('cWeek');
+  const cM = document.getElementById('cMonth');
+
+  if (cur) {
+    cT.hidden = false; cW.hidden = false;
+    cT.innerHTML = donut(p.today) + '<div class="chart-label">📅 Сегодня</div>';
+    cW.innerHTML = donut(p.week) + '<div class="chart-label">📊 Неделя</div>';
+  } else {
+    cT.hidden = true; cW.hidden = true;
+  }
+  cM.innerHTML = donut(p.month) + '<div class="chart-label">📈 Месяц</div>';
+
+  // Table
+  const { tasks: T, completions: C } = load(vY, vM);
+  const days = dim(vY, vM);
+  const todD = cur ? NOW.getDate() : -1;
+
+  // Head row
+  let h = `<tr><th class="col-t">Задачи</th>`;
+  for (let d = 1; d <= days; d++) {
+    const dt = new Date(vY, vM, d), tod = d === todD;
+    h += `<th class="col-d${tod ? ' is-today' : ''}">
+      <span class="dn">${d}</span><span class="dw">${WD[dt.getDay()]}</span>
+    </th>`;
+  }
+  h += `</tr>`;
+  document.getElementById('tHead').innerHTML = h;
+
+  // Body rows
+  let b = '';
+  if (!T.length) {
+    b = `<tr><td class="col-t"><div class="empty-hint">Добавьте первую задачу</div></td>`;
+    for (let d = 1; d <= days; d++)
+      b += `<td class="col-d${d === todD ? ' is-today' : ''}"></td>`;
+    b += `</tr>`;
+  } else {
+    T.forEach(t => {
+      b += `<tr>`;
+      b += `<td class="col-t"><div class="task-cell">
+        <span class="task-name">${esc(t.name)}</span>
+        <button class="del-btn" data-id="${t.id}">×</button>
+      </div></td>`;
+      for (let d = 1; d <= days; d++) {
+        const done = !!C[`${t.id}_${d}`], tod = d === todD;
+        b += `<td class="col-d${tod ? ' is-today' : ''}">
+          <button class="chk-btn" data-id="${t.id}" data-d="${d}">
+            <span class="ring${done ? ' done' : ''}">
+              ${done
+                ? `<svg width="11" height="8" viewBox="0 0 11 8">
+                     <polyline points="1.5,4 4,6.5 9.5,1" fill="none"
+                       stroke="#2563EB" stroke-width="1.5"
+                       stroke-linecap="round" stroke-linejoin="round"/>
+                   </svg>`
+                : ''}
+            </span>
+          </button>
+        </td>`;
+      }
+      b += `</tr>`;
+    });
+  }
+  document.getElementById('tBody').innerHTML = b;
+
+  // Bind events
+  document.querySelectorAll('.chk-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const data = load(vY, vM);
+      const k = `${btn.dataset.id}_${btn.dataset.d}`;
+      data.completions[k] ? delete data.completions[k] : (data.completions[k] = true);
+      save(vY, vM, data); renderAll();
+    });
+  });
+  document.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const data = load(vY, vM);
+      data.tasks = data.tasks.filter(t => t.id !== btn.dataset.id);
+      Object.keys(data.completions).forEach(k => {
+        if (k.startsWith(btn.dataset.id + '_')) delete data.completions[k];
+      });
+      save(vY, vM, data); renderAll();
+    });
+  });
+}
+
+function addTask(name) {
+  name = name.trim();
+  if (!name) return;
+  const data = load(vY, vM);
+  data.tasks.push({ id: uid(), name });
+  save(vY, vM, data); renderAll();
+}
+
+// ── Navigation & Input ────────────────────────────────────────────────────────
+
+document.getElementById('prevBtn').addEventListener('click', () => {
+  vM === 0 ? (vM = 11, vY--) : vM--;
+  renderAll();
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+  vM === 11 ? (vM = 0, vY++) : vM++;
+  renderAll();
+});
+
+const inp = document.getElementById('taskInput');
+inp.addEventListener('keydown', e => { if (e.key === 'Enter') { addTask(inp.value); inp.value = ''; } });
+document.getElementById('addBtn').addEventListener('click', () => { addTask(inp.value); inp.value = ''; });
+
+renderAll();
+</script>
+</body>
+</html>
